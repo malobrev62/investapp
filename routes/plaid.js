@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const plaid = require('../lib/plaidClient');
 const supabase = require('../lib/supabaseClient');
+const cache = require('../lib/cache');
 const { Products, CountryCode } = require('plaid');
 
 // Step 1: Create a link token — sent to iOS to open Plaid Link
@@ -10,7 +11,7 @@ router.post('/create-link-token', async (req, res) => {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: req.body.userId },
       client_name: 'InvestNetWorth',
-      products: [Products.Auth, Products.Balance],
+      products: [Products.Investments, Products.Auth, Products.Balance],
       country_codes: [CountryCode.Us],
       language: 'en',
       link_customization_name: 'default',
@@ -35,6 +36,7 @@ router.post('/exchange-token', async (req, res) => {
       .insert({ user_id: userId, access_token, institution_name, institution_id });
 
     if (error) throw error;
+    cache.del(`accounts_${userId}`);
     res.json({ success: true });
   } catch (err) {
     console.error(err.response?.data || err.message);
@@ -42,6 +44,9 @@ router.post('/exchange-token', async (req, res) => {
   }
 });
 router.get('/oauth-return', (req, res) => {
-  res.send('OAuth complete. You can close this window.');
+  const { oauth_state_id } = req.query;
+  const safeStateId = /^[a-zA-Z0-9_-]+$/.test(oauth_state_id || '') ? oauth_state_id : '';
+  const stateParam = safeStateId ? `?oauth_state_id=${safeStateId}` : '';
+  res.redirect(`investnetworth://oauth-return${stateParam}`);
 });
 module.exports = router;

@@ -1,5 +1,4 @@
-const NodeCache = require('node-cache');
-const cache = new NodeCache({ stdTTL: 300 }); // cache for 5 minutes
+const cache = require('../lib/cache');
 const express = require('express');
 const auth = require('../middleware/auth');
 const router = express.Router();
@@ -19,26 +18,19 @@ const cacheKey = `accounts_${req.params.userId}`;
     if (error) throw error;
 
     const results = await Promise.all(items.map(async (item) => {
-      const [balances, investments] = await Promise.allSettled([
+      const [balances] = await Promise.allSettled([
         plaid.accountsBalanceGet({ access_token: item.access_token }),
-        plaid.investmentsHoldingsGet({ access_token: item.access_token }),
       ]);
 
       if (balances.status === 'rejected') {
         console.error(`Balance fetch failed for ${item.institution_name}:`, balances.reason);
       }
-      if (investments.status === 'rejected') {
-        console.error(`Investments fetch failed for ${item.institution_name}:`, investments.reason);
-      }
-      
+
       const accounts = balances.status === 'fulfilled'
         ? balances.value.data.accounts : [];
-      
-      const holdings = investments.status === 'fulfilled'
-        ? investments.value.data.holdings : [];
-      
-      const securities = investments.status === 'fulfilled'
-        ? investments.value.data.securities : [];
+
+      const holdings = [];
+      const securities = [];
 
       return {
     institutionName: item.institution_name,
