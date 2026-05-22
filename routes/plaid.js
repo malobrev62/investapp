@@ -10,10 +10,11 @@ router.post('/create-link-token', async (req, res) => {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: req.body.userId },
       client_name: 'InvestNetWorth',
-      products: [Products.Investments, Products.Auth],
+      products: [Products.Auth, Products.Balance],
       country_codes: [CountryCode.Us],
       language: 'en',
-      link_customization_name: 'default'
+      link_customization_name: 'default',
+      redirect_uri: 'https://investapp-production.up.railway.app/oauth-return'
     });
     res.json({ link_token: response.data.link_token });
   } catch (err) {
@@ -40,5 +41,7 @@ router.post('/exchange-token', async (req, res) => {
     res.status(500).json({ error: 'Failed to exchange token' });
   }
 });
-
+router.get('/oauth-return', (req, res) => {
+  res.send('OAuth complete. You can close this window.');
+});
 module.exports = router;

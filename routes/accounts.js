@@ -1,10 +1,16 @@
+const NodeCache = require('node-cache');
+const cache = new NodeCache({ stdTTL: 300 }); // cache for 5 minutes
 const express = require('express');
+const auth = require('../middleware/auth');
 const router = express.Router();
 const plaid = require('../lib/plaidClient');
 const supabase = require('../lib/supabaseClient');
 
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', auth, async (req, res) => {
   try {
+const cacheKey = `accounts_${req.params.userId}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
     const { data: items, error } = await supabase
       .from('plaid_items')
       .select('*')
@@ -18,12 +24,19 @@ router.get('/:userId', async (req, res) => {
         plaid.investmentsHoldingsGet({ access_token: item.access_token }),
       ]);
 
+      if (balances.status === 'rejected') {
+        console.error(`Balance fetch failed for ${item.institution_name}:`, balances.reason);
+      }
+      if (investments.status === 'rejected') {
+        console.error(`Investments fetch failed for ${item.institution_name}:`, investments.reason);
+      }
+      
       const accounts = balances.status === 'fulfilled'
         ? balances.value.data.accounts : [];
-
+      
       const holdings = investments.status === 'fulfilled'
         ? investments.value.data.holdings : [];
-
+      
       const securities = investments.status === 'fulfilled'
         ? investments.value.data.securities : [];
 
@@ -45,13 +58,17 @@ router.get('/:userId', async (req, res) => {
             name: security?.name || 'Unknown',
             value: h.institution_value,
             quantity: h.quantity,
-            returnPercent: 0,
+            returnPercent: h.cost_basis && h.cost_basis > 0
+  ? parseFloat((((h.institution_value - h.cost_basis) / h.cost_basis) * 100).toFixed(2))
+  : null,
         };
     }),
 };
     }));
 
-    res.json({ accounts: results });
+    const response = { accounts: results };
+    cache.set(cacheKey, response);
+    res.json(response);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Failed to fetch accounts' });
