@@ -13,9 +13,9 @@ module.exports = async (req, res, next) => {
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  if (user.id !== req.params.userId) {
+  if (user.id.toLowerCase() !== req.params.userId.toLowerCase()) {
     return res.status(403).json({ error: 'Forbidden' });
-  }
+}
 
   req.user = user;
   next();
