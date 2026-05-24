@@ -7,9 +7,10 @@ const supabase = require('../lib/supabaseClient');
 
 router.get('/:userId', auth, async (req, res) => {
   try {
-const cacheKey = `accounts_${req.params.userId}`;
+    const cacheKey = `accounts_${req.params.userId}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
+
     const { data: items, error } = await supabase
       .from('plaid_items')
       .select('*')
@@ -18,8 +19,9 @@ const cacheKey = `accounts_${req.params.userId}`;
     if (error) throw error;
 
     const results = await Promise.all(items.map(async (item) => {
-      const [balances] = await Promise.allSettled([
+      const [balances, investments] = await Promise.allSettled([
         plaid.accountsBalanceGet({ access_token: item.access_token }),
+        plaid.investmentsHoldingsGet({ access_token: item.access_token }),
       ]);
 
       if (balances.status === 'rejected') {
@@ -29,39 +31,42 @@ const cacheKey = `accounts_${req.params.userId}`;
         console.error(`Investments fetch failed for ${item.institution_name}:`, investments.reason);
       }
       if (investments.status === 'fulfilled') {
-  console.log(`Investments for ${item.institution_name}:`, JSON.stringify(investments.value.data));
-} 
+        console.log(`Investments for ${item.institution_name}:`, JSON.stringify(investments.value.data));
+      }
 
       const accounts = balances.status === 'fulfilled'
         ? balances.value.data.accounts : [];
 
-      const holdings = [];
-      const securities = [];
+      const holdings = investments.status === 'fulfilled'
+        ? investments.value.data.holdings : [];
+
+      const securities = investments.status === 'fulfilled'
+        ? investments.value.data.securities : [];
 
       return {
-    institutionName: item.institution_name,
-    institutionId: item.institution_id,
-    accounts: accounts.map(a => ({
-        id: a.account_id,
-        name: a.name,
-        type: a.type,
-        subtype: a.subtype,
-        balance: a.balances.current,
-        available: a.balances.available,
-    })),
-    holdings: holdings.map(h => {
-        const security = securities.find(s => s.security_id === h.security_id);
-        return {
+        institutionName: item.institution_name,
+        institutionId: item.institution_id,
+        accounts: accounts.map(a => ({
+          id: a.account_id,
+          name: a.name,
+          type: a.type,
+          subtype: a.subtype,
+          balance: a.balances.current,
+          available: a.balances.available,
+        })),
+        holdings: holdings.map(h => {
+          const security = securities.find(s => s.security_id === h.security_id);
+          return {
             ticker: security?.ticker_symbol || security?.name || 'Unknown',
             name: security?.name || 'Unknown',
             value: h.institution_value,
             quantity: h.quantity,
             returnPercent: h.cost_basis && h.cost_basis > 0
-  ? parseFloat((((h.institution_value - h.cost_basis) / h.cost_basis) * 100).toFixed(2))
-  : null,
-        };
-    }),
-};
+              ? parseFloat((((h.institution_value - h.cost_basis) / h.cost_basis) * 100).toFixed(2))
+              : null,
+          };
+        }),
+      };
     }));
 
     const response = { accounts: results };
