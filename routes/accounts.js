@@ -25,6 +25,12 @@ const cacheKey = `accounts_${req.params.userId}`;
       if (balances.status === 'rejected') {
         console.error(`Balance fetch failed for ${item.institution_name}:`, balances.reason);
       }
+      if (investments.status === 'rejected') {
+        console.error(`Investments fetch failed for ${item.institution_name}:`, investments.reason);
+      }
+      if (investments.status === 'fulfilled') {
+  console.log(`Investments for ${item.institution_name}:`, JSON.stringify(investments.value.data));
+} 
 
       const accounts = balances.status === 'fulfilled'
         ? balances.value.data.accounts : [];
