@@ -29,23 +29,32 @@ router.get('/:userId', auth, async (req, res) => {
           options: { include_optional_metadata: true }
         })
       ]);
-    
+
       if (balances.status === 'rejected') {
         console.error(`Balance fetch failed for ${item.institution_name}:`, balances.reason);
       }
       if (investments.status === 'rejected') {
         console.error(`Investments fetch failed for ${item.institution_name}:`, investments.reason);
       }
-    
+
       const logo = institution.status === 'fulfilled'
         ? institution.value.data.institution.logo
         : null;
 
-        return {
-          institutionName: item.institution_name,
-          institutionId: item.institution_id,
-          logo: logo,
-          accounts: accounts.map(a => ({
+      const accounts = balances.status === 'fulfilled'
+        ? balances.value.data.accounts : [];
+
+      const holdings = investments.status === 'fulfilled'
+        ? investments.value.data.holdings : [];
+
+      const securities = investments.status === 'fulfilled'
+        ? investments.value.data.securities : [];
+
+      return {
+        institutionName: item.institution_name,
+        institutionId: item.institution_id,
+        logo: logo,
+        accounts: accounts.map(a => ({
           id: a.account_id,
           name: a.name,
           type: a.type,
@@ -67,37 +76,40 @@ router.get('/:userId', auth, async (req, res) => {
         }),
       };
     }));
-    router.get('/:userId/history', auth, async (req, res) => {
-      try {
-        const { period } = req.query; // '1M', '3M', '1Y', 'All'
-        
-        if (period === '7D') fromDate.setDate(fromDate.getDate() - 7);
-else if (period === '1M') fromDate.setMonth(fromDate.getMonth() - 1);
-else if (period === '3M') fromDate.setMonth(fromDate.getMonth() - 3);
-else if (period === '1Y') fromDate.setFullYear(fromDate.getFullYear() - 1);
-else fromDate = new Date('2000-01-01');// All
-    
-        const { data, error } = await supabase
-          .from('balance_history')
-          .select('*')
-          .eq('user_id', req.params.userId)
-          .gte('recorded_at', fromDate.toISOString())
-          .order('recorded_at', { ascending: true });
-    
-        if (error) throw error;
-    
-        res.json({ history: data });
-      } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: 'Failed to fetch balance history' });
-      }
-    });
+
     const response = { accounts: results };
     cache.set(cacheKey, response);
     res.json(response);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Failed to fetch accounts' });
+  }
+});
+
+router.get('/:userId/history', auth, async (req, res) => {
+  try {
+    const { period } = req.query;
+    let fromDate = new Date();
+
+    if (period === '7D') fromDate.setDate(fromDate.getDate() - 7);
+    else if (period === '1M') fromDate.setMonth(fromDate.getMonth() - 1);
+    else if (period === '3M') fromDate.setMonth(fromDate.getMonth() - 3);
+    else if (period === '1Y') fromDate.setFullYear(fromDate.getFullYear() - 1);
+    else fromDate = new Date('2000-01-01');
+
+    const { data, error } = await supabase
+      .from('balance_history')
+      .select('*')
+      .eq('user_id', req.params.userId)
+      .gte('recorded_at', fromDate.toISOString())
+      .order('recorded_at', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ history: data });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Failed to fetch balance history' });
   }
 });
 
