@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const cron = require('node-cron');
+const snapshotBalances = require('./jobs/snapshotBalances');
 require('dotenv').config();
 
 const app = express();
@@ -10,6 +12,8 @@ app.use('/plaid', require('./routes/plaid'));
 app.use('/accounts', require('./routes/accounts'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+cron.schedule('0 * * * *', snapshotBalances);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

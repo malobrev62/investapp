@@ -8,6 +8,7 @@ const supabase = require('../lib/supabaseClient');
 router.get('/:userId', auth, async (req, res) => {
   try {
     const cacheKey = `accounts_${req.params.userId}`;
+    if (req.query.refresh === 'true') cache.del(cacheKey);
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
