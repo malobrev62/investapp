@@ -59,8 +59,8 @@ router.get('/:userId', auth, async (req, res) => {
           name: a.name,
           type: a.type,
           subtype: a.subtype,
-          balance: a.balances.current,
-          available: a.balances.available,
+          balance: a.balances.available ?? a.balances.current,
+          available: a.balances.current,
         })),
         holdings: holdings.map(h => {
           const security = securities.find(s => s.security_id === h.security_id);
