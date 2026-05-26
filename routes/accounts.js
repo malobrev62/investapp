@@ -73,11 +73,11 @@ router.get('/:userId', auth, async (req, res) => {
       try {
         const { period } = req.query; // '1M', '3M', '1Y', 'All'
         
-        let fromDate = new Date();
-        if (period === '1M') fromDate.setMonth(fromDate.getMonth() - 1);
-        else if (period === '3M') fromDate.setMonth(fromDate.getMonth() - 3);
-        else if (period === '1Y') fromDate.setFullYear(fromDate.getFullYear() - 1);
-        else fromDate = new Date('2000-01-01'); // All
+        if (period === '7D') fromDate.setDate(fromDate.getDate() - 7);
+else if (period === '1M') fromDate.setMonth(fromDate.getMonth() - 1);
+else if (period === '3M') fromDate.setMonth(fromDate.getMonth() - 3);
+else if (period === '1Y') fromDate.setFullYear(fromDate.getFullYear() - 1);
+else fromDate = new Date('2000-01-01');// All
     
         const { data, error } = await supabase
           .from('balance_history')
