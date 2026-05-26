@@ -20,34 +20,32 @@ router.get('/:userId', auth, async (req, res) => {
     if (error) throw error;
 
     const results = await Promise.all(items.map(async (item) => {
-      const [balances, investments] = await Promise.allSettled([
+      const [balances, investments, institution] = await Promise.allSettled([
         plaid.accountsBalanceGet({ access_token: item.access_token }),
         plaid.investmentsHoldingsGet({ access_token: item.access_token }),
+        plaid.institutionsGetById({
+          institution_id: item.institution_id,
+          country_codes: ['US'],
+          options: { include_optional_metadata: true }
+        })
       ]);
-
+    
       if (balances.status === 'rejected') {
         console.error(`Balance fetch failed for ${item.institution_name}:`, balances.reason);
       }
       if (investments.status === 'rejected') {
         console.error(`Investments fetch failed for ${item.institution_name}:`, investments.reason);
       }
-      if (investments.status === 'fulfilled') {
-        console.log(`Investments for ${item.institution_name}:`, JSON.stringify(investments.value.data));
-      }
+    
+      const logo = institution.status === 'fulfilled'
+        ? institution.value.data.institution.logo
+        : null;
 
-      const accounts = balances.status === 'fulfilled'
-        ? balances.value.data.accounts : [];
-
-      const holdings = investments.status === 'fulfilled'
-        ? investments.value.data.holdings : [];
-
-      const securities = investments.status === 'fulfilled'
-        ? investments.value.data.securities : [];
-
-      return {
-        institutionName: item.institution_name,
-        institutionId: item.institution_id,
-        accounts: accounts.map(a => ({
+        return {
+          institutionName: item.institution_name,
+          institutionId: item.institution_id,
+          logo: logo,
+          accounts: accounts.map(a => ({
           id: a.account_id,
           name: a.name,
           type: a.type,
