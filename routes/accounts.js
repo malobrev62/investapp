@@ -69,7 +69,31 @@ router.get('/:userId', auth, async (req, res) => {
         }),
       };
     }));
-
+    router.get('/:userId/history', auth, async (req, res) => {
+      try {
+        const { period } = req.query; // '1M', '3M', '1Y', 'All'
+        
+        let fromDate = new Date();
+        if (period === '1M') fromDate.setMonth(fromDate.getMonth() - 1);
+        else if (period === '3M') fromDate.setMonth(fromDate.getMonth() - 3);
+        else if (period === '1Y') fromDate.setFullYear(fromDate.getFullYear() - 1);
+        else fromDate = new Date('2000-01-01'); // All
+    
+        const { data, error } = await supabase
+          .from('balance_history')
+          .select('*')
+          .eq('user_id', req.params.userId)
+          .gte('recorded_at', fromDate.toISOString())
+          .order('recorded_at', { ascending: true });
+    
+        if (error) throw error;
+    
+        res.json({ history: data });
+      } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Failed to fetch balance history' });
+      }
+    });
     const response = { accounts: results };
     cache.set(cacheKey, response);
     res.json(response);
