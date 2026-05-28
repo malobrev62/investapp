@@ -11,7 +11,8 @@ router.post('/create-link-token', async (req, res) => {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: req.body.userId },
       client_name: 'InvestNetWorth',
-      products: [Products.Investments, Products.Auth],
+      products: [Products.Auth],
+      required_if_supported_products: [Products.Investments],
       country_codes: [CountryCode.Us],
       language: 'en',
       link_customization_name: 'default',
