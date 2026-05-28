@@ -5,8 +5,26 @@ const supabase = require('../lib/supabaseClient');
 const cache = require('../lib/cache');
 const { Products, CountryCode } = require('plaid');
 
-// Step 1: Create a link token — sent to iOS to open Plaid Link
-router.post('/create-link-token', async (req, res) => {
+// For bank accounts (checking, savings)
+router.post('/create-link-token/banking', async (req, res) => {
+  try {
+    const response = await plaid.linkTokenCreate({
+      user: { client_user_id: req.body.userId },
+      client_name: 'InvestNetWorth',
+      products: [Products.Balance],
+      country_codes: [CountryCode.Us],
+      language: 'en',
+      redirect_uri: 'https://investapp-production.up.railway.app/oauth-return'
+    });
+    res.json({ link_token: response.data.link_token });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to create link token' });
+  }
+});
+
+// For investment accounts (brokerage, 401k, retirement)
+router.post('/create-link-token/investing', async (req, res) => {
   try {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: req.body.userId },
@@ -14,7 +32,6 @@ router.post('/create-link-token', async (req, res) => {
       products: [Products.Investments],
       country_codes: [CountryCode.Us],
       language: 'en',
-      link_customization_name: 'default',
       redirect_uri: 'https://investapp-production.up.railway.app/oauth-return'
     });
     res.json({ link_token: response.data.link_token });
