@@ -51,7 +51,6 @@ router.get('/:userId', auth, async (req, res) => {
         ? investments.value.data.securities : [];
 
       const holdingsTotal = holdings.reduce((sum, h) => sum + (h.institution_value || 0), 0);
-      const holdingsTotal = holdings.reduce((sum, h) => sum + (h.institution_value || 0), 0);
       console.log(`Holdings total for ${item.institution_name}: $${holdingsTotal}, accounts count: ${accounts.length}`);
 
       return {
