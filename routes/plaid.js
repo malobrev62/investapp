@@ -6,15 +6,13 @@ const cache = require('../lib/cache');
 const { Products, CountryCode } = require('plaid');
 
 // For bank accounts (checking, savings)
-// For bank accounts (checking, savings)
 router.post('/create-link-token/banking', async (req, res) => {
   try {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: req.body.userId },
       client_name: 'InvestNetWorth',
       products: [],
-      required_if_supported_products: [Products.Auth],
-      optional_products: [Products.Investments],
+      products: [Products.Auth, Products.Investments],
       country_codes: [CountryCode.Us],
       language: 'en',
       redirect_uri: 'https://investapp-production.up.railway.app/oauth-return'
