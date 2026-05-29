@@ -41,8 +41,32 @@ router.get('/:userId', auth, async (req, res) => {
         ? institution.value.data.institution.logo
         : null;
 
-      const accounts = balances.status === 'fulfilled'
+        const accounts = balances.status === 'fulfilled'
         ? balances.value.data.accounts : [];
+      
+      // For investment-only items, calculate balance from holdings
+      const holdingsTotal = holdings.reduce((sum, h) => sum + (h.institution_value || 0), 0);
+      
+      return {
+        institutionName: item.institution_name,
+        institutionId: item.institution_id,
+        logo: logo,
+        accounts: accounts.length > 0 ? accounts.map(a => ({
+          id: a.account_id,
+          name: a.name,
+          type: a.type,
+          subtype: a.subtype,
+          balance: a.balances.current,
+          available: a.balances.available,
+        })) : [{
+          id: item.institution_id,
+          name: item.institution_name,
+          type: 'investment',
+          subtype: 'retirement',
+          balance: holdingsTotal,
+          available: holdingsTotal,
+        }],
+        holdings: holdings.map(h => {
 
       const holdings = investments.status === 'fulfilled'
         ? investments.value.data.holdings : [];
