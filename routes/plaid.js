@@ -61,6 +61,16 @@ router.post('/exchange-token', async (req, res) => {
     res.status(500).json({ error: 'Failed to exchange token' });
   }
 });
+router.post('/remove-item', async (req, res) => {
+  try {
+    const { access_token } = req.body;
+    await plaid.itemRemove({ access_token });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to remove item' });
+  }
+});
 router.get('/oauth-return', (req, res) => {
   const { oauth_state_id } = req.query;
   const safeStateId = /^[a-zA-Z0-9_-]+$/.test(oauth_state_id || '') ? oauth_state_id : '';
