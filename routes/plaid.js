@@ -29,7 +29,7 @@ router.post('/create-link-token/investing', async (req, res) => {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: req.body.userId },
       client_name: 'InvestNetWorth',
-      products: [Products.Investments, Products.Auth],
+      products: [Products.Investments],
       country_codes: [CountryCode.Us],
       language: 'en',
       redirect_uri: 'https://investapp-production.up.railway.app/oauth-return'
